@@ -1,6 +1,6 @@
 # HEX Auth HTTPS Scanner
 
-A Python-based HTTPS scanner that tests **15-character hexadecimal authentication tokens** via a query parameter and identifies **response patterns based on Content-Length and HTTP status codes**.
+A Python-based HTTPS scanner that tests **15-character hexadecimal authentication tokens** via a query parameter and classifies responses as **TRUE or FALSE based on HTTP status code (200) and Content-Length conditions**.
 
 This tool is designed for **analysis, debugging, and security research** where response fingerprinting is required.
 
@@ -11,10 +11,10 @@ This tool is designed for **analysis, debugging, and security research** where r
 * Tests 15-character hexadecimal values (`0-9a-f`)
 * Sends requests over **HTTPS**
 * Appends tokens to `?auth=` query parameter
-* Matches responses by:
+* Classifies responses using:
 
-  * HTTP status code (`200`)
-  * `Content-Length` value
+  * HTTP status code (`200` only)
+  * `Content-Length` comparison logic
 * Logs **all matching results** to a separate TXT file
 * Resume-capable via configurable HEX ranges
 * Optional request delay (rate-limit friendly)
@@ -28,6 +28,18 @@ This tool is designed for **analysis, debugging, and security research** where r
 * Authentication token behavior analysis
 * Web application testing
 * Debugging inconsistent server-side auth logic
+
+---
+
+## 🧠 Matching Logic
+
+A result is considered:
+
+* **TRUE** → HTTP status code is `200` **and** `Content-Length` is **not equal** to the excluded value (or the header is missing)
+* **FALSE** → HTTP status code is `200` **and** `Content-Length` **equals** the excluded value
+* Any response with a status code **other than 200 is ignored**
+
+This logic allows reliable differentiation between standard and non-standard server responses.
 
 ---
 
@@ -74,6 +86,14 @@ Edit the script configuration section:
 ---
 
 ## ▶️ Usage
+
+Configure the excluded `Content-Length` value directly in the script:
+
+```python
+EXCLUDED_CONTENT_LENGTH = 5465
+```
+
+Only responses with HTTP status `200` are evaluated.
 
 ```bash
 python auth_hex_https_scan_extended.py
