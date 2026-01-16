@@ -69,10 +69,10 @@ def main():
     start = int(START_HEX, 16)
     end   = int(END_HEX, 16)
 
-    print("[*] HTTPS Auth HEX Scan gestartet")
+    print("[*] HTTPS Auth HEX Scan starts")
     print("[*] URL:", BASE_URL)
     print("[*] Range:", START_HEX, "→", END_HEX)
-    print("[*] Ziel Content-Length:", TARGET_CONTENT_LENGTH)
+    print("[*] Target Content-Length:", TARGET_CONTENT_LENGTH)
 
     with open(OUTPUT_FILE, "a") as outfile:
         for i in range(start, end + 1):
