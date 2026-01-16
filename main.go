@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"crypto/tls"
 	"fmt"
 	"net/http"
+	"os"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -20,6 +22,10 @@ const (
 var (
 	totalGenerated uint64
 	totalMatched   uint64
+
+	matchFile *os.File
+	matchW    *bufio.Writer
+	fileMutex sync.Mutex
 )
 
 /* =======================
@@ -32,7 +38,7 @@ func startMockServer() {
 	mux.HandleFunc("/index.php", func(w http.ResponseWriter, r *http.Request) {
 		auth := r.URL.Query().Get("auth")
 
-		// Simulierter "gültiger" Token
+		// Simulierter gültiger Token
 		if auth == "5bb4ba51a4cb8cf" {
 			body := make([]byte, 1234)
 			w.Header().Set("Content-Length", "1234")
@@ -69,7 +75,7 @@ var client = &http.Client{
 	Timeout: 2 * time.Second,
 	Transport: &http.Transport{
 		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true, // ⚠️ nur localhost
+			InsecureSkipVerify: true, // ⚠️ NUR localhost
 		},
 		MaxIdleConns:        2000,
 		MaxIdleConnsPerHost: 2000,
@@ -127,7 +133,10 @@ func worker(jobs <-chan string, wg *sync.WaitGroup) {
 
 		if checkToken(token) {
 			atomic.AddUint64(&totalMatched, 1)
-			fmt.Println("MATCH:", token)
+
+			fileMutex.Lock()
+			matchW.WriteString(token + "\n")
+			fileMutex.Unlock()
 		}
 	}
 }
@@ -139,10 +148,20 @@ func worker(jobs <-chan string, wg *sync.WaitGroup) {
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
+	// Match-Datei
+	var err error
+	matchFile, err = os.Create("matches.txt")
+	if err != nil {
+		panic(err)
+	}
+	defer matchFile.Close()
+
+	matchW = bufio.NewWriter(matchFile)
+	defer matchW.Flush()
+
 	fmt.Println("Starting HTTPS mock server...")
 	startMockServer()
-
-	time.Sleep(500 * time.Millisecond) // Server hochfahren lassen
+	time.Sleep(500 * time.Millisecond)
 
 	jobs := make(chan string, 10_000)
 	var wg sync.WaitGroup
@@ -164,14 +183,25 @@ func main() {
 
 	gen := atomic.LoadUint64(&totalGenerated)
 	match := atomic.LoadUint64(&totalMatched)
-
-	fmt.Println("===== RESULT =====")
-	fmt.Println("CPU cores:", runtime.NumCPU())
-	fmt.Println("Workers:", workers)
-	fmt.Println("Tokens generated:", gen)
-	fmt.Println("Matches:", match)
-	fmt.Println("Elapsed time:", elapsed)
-
 	rate := float64(gen) / elapsed.Seconds()
-	fmt.Printf("Rate: %.2f tokens/sec\n", rate)
+
+	// Statistik-Datei
+	stats, err := os.Create("stats.txt")
+	if err != nil {
+		panic(err)
+	}
+	defer stats.Close()
+
+	statsW := bufio.NewWriter(stats)
+	defer statsW.Flush()
+
+	statsW.WriteString("===== RESULT =====\n")
+	statsW.WriteString(fmt.Sprintf("CPU cores: %d\n", runtime.NumCPU()))
+	statsW.WriteString(fmt.Sprintf("Workers: %d\n", workers))
+	statsW.WriteString(fmt.Sprintf("Tokens generated: %d\n", gen))
+	statsW.WriteString(fmt.Sprintf("Matches: %d\n", match))
+	statsW.WriteString(fmt.Sprintf("Elapsed time: %s\n", elapsed))
+	statsW.WriteString(fmt.Sprintf("Rate: %.2f tokens/sec\n", rate))
+
+	fmt.Println("Done.")
 }
