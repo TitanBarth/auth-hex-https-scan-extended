@@ -16,7 +16,7 @@ const (
 	tokenLength = 15
 	alphabet    = "0123456789abcdef"
 	workers     = 8
-	baseURL     = "https://127.0.0.1:8443/index.php?auth="
+	baseURL     = "https://example.com:443/index.php?auth="
 )
 
 var (
@@ -55,7 +55,7 @@ func startMockServer() {
 	})
 
 	server := &http.Server{
-		Addr:    ":8443",
+		Addr:    ":443",
 		Handler: mux,
 	}
 
