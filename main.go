@@ -148,7 +148,7 @@ func worker(id int, tokenCh <-chan string, matchCh chan<- string, wg *sync.WaitG
 			continue
 		}
 	
-		// ✅ HIER: Request war erfolgreich
+		// HERE: Request was successful
 		atomic.AddUint64(&totalRequests, 1)
 	
 		// read body fully to get Content-Length
